@@ -1,0 +1,321 @@
+.TH IOTSCAN 1 "2026-10-24" "iotscan 0.1.0" "User Commands"
+.SH NAME
+iotscan \- find vulnerable IoT devices on your home network
+.SH SYNOPSIS
+.B iotscan
+.RI [ OPTIONS ]
+.RI [ TARGET ...]
+.br
+.B iotscan
+.I COMMAND
+.RI [ ARGS ]
+.SH DESCRIPTION
+.B iotscan
+discovers the devices on your local network, identifies what each one is running, and checks them for known vulnerabilities and risky configuration.
+It ships with a checker for the October 2026 \fBPHP2Shell\fR flaws (CVE-2026-109618 and CVE-2026-109619), plus checks for end-of-life PHP, exposed phpinfo() pages, Telnet and UPnP.
+New checkers are added as small Rust modules or, for banner-identifiable software, as entries in a TOML advisory file.
+.PP
+It is a single static binary with no runtime dependencies and works on Ubuntu, Lubuntu and other Linux systems (x86_64 and aarch64).
+It runs as an ordinary user.
+.PP
+Run with no arguments it scans every local IPv4 subnet, prints a report, compares it with the previous scan, and saves the result.
+.PP
+.B Only scan networks you own or are authorised to test.
+.SS Discovery
+Devices are found by several independent methods and merged:
+.IP \(bu 2
+a TCP connect sweep (a refused connection still proves a host is alive);
+.IP \(bu 2
+the kernel ARP cache, which also reveals hosts that ignore every probe, and their MAC addresses;
+.IP \(bu 2
+an optional raw ARP sweep, when the binary has the CAP_NET_RAW capability (see \fBPRIVILEGES\fR);
+.IP \(bu 2
+mDNS / DNS-SD and SSDP / UPnP announcements, which name many smart-home devices;
+.IP \(bu 2
+IPv6 neighbour discovery by multicast echo to ff02::1.
+.PP
+MAC addresses are mapped to vendors with an embedded copy of the IEEE registry.
+.SS Identification and checks
+Open ports are identified (HTTP and HTTPS with self-signed certificates, SSH, Telnet, FTP, RTSP, MQTT).
+Each web service is fetched once (following same-device redirects) and fingerprinted from headers, cookies and page content.
+Checkers then judge the evidence.
+.SS Confidence levels
+Every finding has a severity (critical, high, medium, low, info) and a
+.B confidence
+that says how sure iotscan is that it applies to this device:
+.TP
+.B confirmed
+Observed directly, for example an open Telnet port.
+.TP
+.B likely
+Good evidence: an authoritative version in the affected range with no sign of vendor back-porting.
+.TP
+.B possible
+A weak or indirect signal: the version is hidden, or the build looks like a Debian, Ubuntu or RHEL package, which usually back-ports fixes without changing the version number.
+Check the package changelog or vendor notes before acting.
+.SH COMMANDS
+.TP
+.B scan
+Scan the network. This is the default when no command is given.
+.TP
+.B gui
+Start the local web interface and open it in a browser. See \fBGUI\fR.
+.TP
+.BI diff " OLD NEW"
+Compare two saved scans (JSON files). Add \fB\-\-json\fR for machine-readable output.
+.TP
+.B history
+List saved scans.
+.TP
+.B checkers
+List the available checkers (\fB\-\-json\fR for JSON).
+.TP
+.B advisories
+Show and validate the advisory database. \fB\-\-file FILE\fR merges and validates an extra file.
+.TP
+.B doctor
+Report privileges, interfaces, and configuration problems. Run this first if something is missing.
+.TP
+.B selftest
+Scan a fleet of mock devices on 127.0.0.1 and verify that the right findings (and no wrong ones) are reported. Takes about fifteen seconds and sends nothing off the machine.
+.TP
+.BI completions " SHELL"
+Print a completion script for bash, zsh or fish.
+.SH OPTIONS
+.SS Targets and ports
+.TP
+.I TARGET
+What to scan. Any number of: an address (192.168.1.20), a CIDR block (192.168.1.0/24), a range (10.0.0.5-10.0.0.50 or 10.0.0.5-50), or an IPv6 address.
+The default is every local IPv4 subnet (interfaces such as docker0 and veth* are skipped).
+Subnets larger than \fB\-\-max\-hosts\fR addresses are narrowed to the block around your address, with a note.
+.TP
+.BR \-p ", " \-\-ports " " \fIPORTS\fR
+Ports to sweep: \fBdefault\fR, \fBweb\fR, a list such as 80,443, or ranges such as 8000\-8100.
+Ports needed by checkers (for example 23 for Telnet) are always added.
+.TP
+.BR \-i ", " \-\-iface " " \fIIFACE\fR
+Use only this interface for auto-detection and multicast discovery.
+.TP
+.BI \-\-max\-hosts " N"
+Refuse to expand targets beyond N addresses (default 4096).
+.TP
+.B \-\-allow\-public
+Confirm you are authorised to scan addresses outside private ranges (10/8, 172.16/12, 192.168/16, 169.254/16, loopback, fc00::/7, fe80::/10).
+Without it, an interactive terminal asks for confirmation and non-interactive runs refuse.
+.SS Behaviour
+.TP
+.B \-\-active
+Send extra, still non-destructive requests: for example look for an exposed /phpinfo.php to learn a hidden PHP version.
+iotscan never sends exploit payloads and never triggers memory-corruption bugs.
+.TP
+.B \-\-fast
+More parallelism, no rate limit, shorter timeouts. Quicker, but harder on fragile devices.
+.TP
+.BI \-\-rate " N"
+At most N new connections per second across the scan (default 400; 0 = unlimited).
+.TP
+.BI \-\-per\-host " N"
+At most N simultaneous connections to one device (default 2).
+.TP
+.BI \-\-timeout\-ms " MS"
+TCP connect timeout (default 1200).
+.TP
+.BR \-\-no\-mdns ", " \-\-no\-ssdp ", " \-\-no\-ipv6 ", " \-\-no\-arp
+Disable mDNS, SSDP, IPv6 neighbour discovery, or the raw ARP sweep.
+.TP
+.BI \-\-only " IDS"
+Run only these checkers (comma separated; see \fBiotscan checkers\fR).
+.TP
+.BI \-\-skip " IDS"
+Skip these checkers.
+.TP
+.BI \-\-advisories " FILE"
+Merge an extra advisory file over the built-in database.
+.TP
+.BI \-\-allowlist " FILE"
+Accepted-risk suppressions (default: ~/.config/iotscan/allowlist.toml).
+.SS Output
+.TP
+.B \-\-json
+Print the full result as JSON on standard output. The text report is not printed.
+.TP
+.BR \-o ", " \-\-output " " \fIFILE\fR
+Also write the JSON result to FILE (mode 0600).
+.TP
+.BI \-\-html " FILE"
+Write a standalone, script-free HTML report to FILE (mode 0600).
+.TP
+.BI \-\-color " WHEN"
+\fBauto\fR (default), \fBalways\fR or \fBnever\fR. The NO_COLOR variable is honoured.
+.TP
+.BR \-v ", " \-\-verbose
+Show evidence and low-severity details.
+.TP
+.BR \-q ", " \-\-quiet
+Do not print progress.
+.TP
+.B \-\-show\-suppressed
+Include findings suppressed by the allowlist.
+.SS History
+.TP
+.B \-\-no\-history
+Neither read nor write scan history.
+.TP
+.BI \-\-baseline " FILE"
+Compare against this saved scan instead of the latest.
+.TP
+.BI \-\-history\-dir " DIR"
+History directory (default: ~/.local/share/iotscan/history). The last 60 scans are kept.
+.TP
+.BI \-\-fail\-on " SEVERITY"
+Exit with status 1 when an active finding at or above SEVERITY exists: \fBnone\fR, \fBinfo\fR, \fBlow\fR, \fBmedium\fR, \fBhigh\fR (default) or \fBcritical\fR.
+.SH GUI
+.B iotscan gui
+starts a small web server bound to 127.0.0.1 only, prints a link, and opens it in your browser.
+The interface shows your network as a panel of breakers, one per device, with tripped ones needing attention; a prioritised list of findings; a searchable device table; and per-device detail with advice.
+It can start and stop scans, shows devices as they are found, compares with earlier scans, and exports the HTML report.
+.PP
+Options:
+.BR \-\-port " " \fIN\fR
+(default: a free port),
+.B \-\-no\-open
+(print the link, do not launch a browser),
+.B \-\-demo
+(show sample data without scanning),
+.BR \-\-history\-dir ", " \-\-advisories ", " \-\-allowlist ", " \-\-no\-arp .
+.PP
+The link contains a random token that becomes an HttpOnly, SameSite=Strict cookie.
+Every request must carry it, name 127.0.0.1 or localhost as its Host, and mutating requests must be same-origin JSON.
+The page is served with a strict Content-Security-Policy and never inserts device-supplied text as markup.
+Press Ctrl-C in the terminal, or use Quit in the page, to stop it.
+.SH PRIVILEGES
+.B iotscan
+needs no privileges and should not be run with sudo.
+Optionally, the faster raw ARP sweep can be enabled for your user:
+.PP
+.RS
+sudo setcap cap_net_raw+ep $(command \-v iotscan)
+.RE
+.PP
+The capability is used for one thing, opening ARP sockets, before any thread is started.
+All capabilities are then dropped permanently, so everything that parses data from the network runs with none.
+Replacing the binary clears the capability; run setcap again.
+If started as root (for example via sudo) the same sockets are opened and the process then drops to the invoking user (SUDO_UID), or to nobody.
+.SH SAFETY
+.IP \(bu 2
+Per-device (2) and global (256) concurrency limits and a global rate limit keep fragile devices alive.
+.IP \(bu 2
+Only GET, HEAD and OPTIONS requests are ever sent. Responses, headers and banners are size-capped, and every exchange has a deadline.
+.IP \(bu 2
+Redirects are followed only to the same device and port; SSDP description URLs are fetched only from the address that announced them.
+.IP \(bu 2
+TLS certificates are not verified (devices use self-signed certificates). No credentials or cookies are ever sent.
+.IP \(bu 2
+All text taken from the network is stripped of control characters before it is stored, so a hostile device cannot inject terminal escape sequences into reports. HTML output is escaped.
+.IP \(bu 2
+Checkers are pure functions over collected evidence and cannot perform I/O; a checker that panics is contained and reported.
+.IP \(bu 2
+Results (JSON, HTML, history) are written readable only by you.
+.SH EXIT STATUS
+.TP
+.B 0
+Success; no active finding at or above \fB\-\-fail\-on\fR.
+.TP
+.B 1
+At least one active finding at or above \fB\-\-fail\-on\fR.
+.TP
+.B 2
+Error (bad arguments, refused target, unreadable file).
+.SH FILES
+.TP
+.I ~/.local/share/iotscan/history/scan-*.json
+Saved scans (directory mode 0700, files 0600).
+.TP
+.I ~/.config/iotscan/allowlist.toml
+Accepted risks. Example:
+.PP
+.RS
+.nf
+[[allow]]
+device  = "aa:bb:cc:dd:ee:ff"   # MAC, IP address, or "*"
+checker = "php2shell"           # optional
+port    = 80                    # optional
+reason  = "Vendor confirmed fix in firmware 2.4"
+expires = "2027-03-01"          # optional, YYYY-MM-DD
+.fi
+.RE
+.TP
+.I ~/.config/iotscan/advisories.toml
+Your own advisories, merged over the built-in database; entries with the same id replace built-in ones.
+Example for software that names its version in a Server banner:
+.PP
+.RS
+.nf
+[[advisory]]
+id = "examplehttpd-2026"
+product = "examplehttpd"        # from "Server: ExampleHTTPd/1.2.3"
+title = "ExampleHTTPd request smuggling"
+severity = "high"
+cves = ["CVE-2026-00000"]
+summary = "..."
+remediation = "Upgrade to 1.4.2 or later."
+[[advisory.affected]]
+branch = "1.4"
+fixed = "1.4.2"
+.fi
+.RE
+.PP
+Validate with \fBiotscan advisories\fR.
+.SH ENVIRONMENT
+.TP
+.B NO_COLOR
+Disable colour output.
+.TP
+.B XDG_CONFIG_HOME, XDG_DATA_HOME
+Override the config and data directories.
+.TP
+.B COLUMNS
+Terminal width when it cannot be detected.
+.SH EXAMPLES
+Scan everything, then see what changed:
+.PP
+.RS
+iotscan
+.RE
+.PP
+Look harder at one camera, including exposed phpinfo() pages:
+.PP
+.RS
+iotscan 192.168.1.20 \-\-active \-v
+.RE
+.PP
+Weekly cron job that exits non-zero on critical findings and writes a report:
+.PP
+.RS
+iotscan \-q \-\-fail\-on critical \-\-html ~/iot-report.html
+.RE
+.PP
+Only the PHP checks, as JSON, for a script:
+.PP
+.RS
+iotscan \-\-only php2shell,php\-eol \-\-json | jq '.devices[].findings[]'
+.RE
+.PP
+Try the interface without scanning anything:
+.PP
+.RS
+iotscan gui \-\-demo
+.RE
+.SH LIMITATIONS
+Banners are claims.
+Distributions back-port fixes without changing version numbers, and some devices hide or fake their headers, so version-based findings carry a confidence level and should be verified.
+A device that hides its PHP version entirely can be reported only as \fBpossible\fR.
+IPv6 neighbour discovery uses unprivileged ICMP sockets and needs net.ipv4.ping_group_range to include your group.
+iotscan can see only what is reachable from where it runs: devices on another VLAN or a guest network need a scan from there.
+.SH SEE ALSO
+.BR setcap (8),
+.BR nmap (1),
+.I docs/WRITING_CHECKERS.md
+in the source distribution.
+.SH AUTHORS
+Built with Claude Code.

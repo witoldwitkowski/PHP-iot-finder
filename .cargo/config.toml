@@ -1,0 +1,10 @@
+# Static musl builds. The aarch64 linker comes from gcc-aarch64-linux-gnu (any aarch64 cross gcc works).
+[target.aarch64-unknown-linux-musl]
+linker = "aarch64-linux-gnu-gcc"
+
+[target.x86_64-unknown-linux-musl]
+linker = "musl-gcc"
+
+[env]
+CC_aarch64_unknown_linux_musl = "aarch64-linux-gnu-gcc"
+CC_x86_64_unknown_linux_musl = "musl-gcc"

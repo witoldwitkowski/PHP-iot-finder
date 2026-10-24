@@ -1,0 +1,136 @@
+# iotscan advisory database.
+#
+# Version facts live here so they can be corrected or extended without touching
+# Rust code. A user file (~/.config/iotscan/advisories.toml, or --advisories FILE)
+# is merged on top: entries with the same `id` replace the built-in ones.
+#
+# Verify against the primary sources (php.net/security, your distribution's
+# security tracker) before acting; banners alone cannot see back-ported fixes.
+
+schema = 1
+updated = "2026-10-24"
+
+# ---------------------------------------------------------------------------
+# PHP release branches and their support windows (https://www.php.net/supported-versions.php)
+# ---------------------------------------------------------------------------
+
+[[php_branch]]
+branch = "5.6"
+security_until = "2018-12-31"
+
+[[php_branch]]
+branch = "7.0"
+security_until = "2018-12-03"
+
+[[php_branch]]
+branch = "7.1"
+security_until = "2019-12-01"
+
+[[php_branch]]
+branch = "7.2"
+security_until = "2020-11-30"
+
+[[php_branch]]
+branch = "7.3"
+security_until = "2021-12-06"
+
+[[php_branch]]
+branch = "7.4"
+security_until = "2022-11-28"
+
+[[php_branch]]
+branch = "8.0"
+security_until = "2023-11-26"
+
+[[php_branch]]
+branch = "8.1"
+security_until = "2025-12-31"
+
+[[php_branch]]
+branch = "8.2"
+active_until = "2024-12-31"
+security_until = "2026-12-31"
+
+[[php_branch]]
+branch = "8.3"
+active_until = "2025-12-31"
+security_until = "2027-12-31"
+
+[[php_branch]]
+branch = "8.4"
+active_until = "2026-12-31"
+security_until = "2028-12-31"
+
+[[php_branch]]
+branch = "8.5"
+active_until = "2027-12-31"
+security_until = "2029-12-31"
+
+# ---------------------------------------------------------------------------
+# PHP2Shell, October 2026
+# ---------------------------------------------------------------------------
+
+[[advisory]]
+id = "php2shell"
+product = "php"
+checker = "php2shell"
+title = "PHP2Shell: unauthenticated remote code execution in PHP"
+severity = "critical"
+cves = ["CVE-2026-109618", "CVE-2026-109619"]
+published = "2026-10-21"
+summary = """Two heap use-after-free flaws in PHP core (an out-of-memory error path that leaves request data partly initialised, and stale request state that is reused after it was freed) let an unauthenticated remote attacker run code with the web worker's privileges. Exploitation in the wild and a public proof of concept have been reported."""
+remediation = """Upgrade PHP to 8.5.12, 8.4.27, 8.3.36 or 8.2.35 (or newer), then restart PHP-FPM / Apache / the device's web service. On Debian, Ubuntu and RHEL-family systems install the vendor's security update instead (check the package changelog for CVE-2026-109618 and CVE-2026-109619). If the device is an appliance, look for a firmware update from its maker, and until then block access to its web interface from untrusted networks."""
+references = [
+  "https://www.cisa.gov/news-events/alerts/2026/10/21/critical-vulnerabilities-php-require-immediate-patching",
+  "https://unit42.paloaltonetworks.com/cve-2026-109618-cve-2026-109619/",
+  "https://www.huntress.com/blog/php2shell-leaked-critical-php-vulnerabilities",
+  "https://aws.amazon.com/security/security-bulletins/2026-143-aws/",
+  "https://securitylabs.datadoghq.com/articles/php2shell-critical-vulnerabilities-in-php/",
+  "https://snyk.io/blog/php-patches-critical-unauthenticated-rces/",
+  "https://support.plesk.com/hc/en-us/articles/44397729587351-Vulnerability-CVE-2026-109618-and-CVE-2026-109619-PHP2Shell-Remote-code-execution-in-PHP-shipped-with-Plesk",
+]
+
+# Upstream fixed releases. A version below `fixed` on its branch is affected.
+[[advisory.affected]]
+branch = "8.5"
+fixed = "8.5.12"
+
+[[advisory.affected]]
+branch = "8.4"
+fixed = "8.4.27"
+
+[[advisory.affected]]
+branch = "8.3"
+fixed = "8.3.36"
+
+[[advisory.affected]]
+branch = "8.2"
+fixed = "8.2.35"
+
+# Branches without an official fixed release.
+[advisory.legacy]
+below = "8.2"
+unconfirmed_below = "7.4"
+note = "PHP 8.1, 8.0 and 7.4 are end-of-life: there is no official fixed release, only minimal source back-ports and vendor-patched packages."
+
+# ---------------------------------------------------------------------------
+# Example of a data-only advisory for any other product whose version appears in
+# a Server / X-Powered-By banner. Copy, adjust, and uncomment; no code needed.
+# ---------------------------------------------------------------------------
+#
+# [[advisory]]
+# id = "example-httpd-2026"
+# product = "examplehttpd"          # lowercase name from "Server: ExampleHTTPd/1.2.3"
+# title = "ExampleHTTPd request smuggling"
+# severity = "high"
+# cves = ["CVE-2026-00000"]
+# published = "2026-10-01"
+# summary = "..."
+# remediation = "Upgrade to 1.4.2 or later."
+# references = ["https://example.com/advisory"]
+# [[advisory.affected]]
+# branch = "1.4"
+# fixed = "1.4.2"
+# [[advisory.affected]]
+# from = "0.0"          # no `fixed`: every version from here up is affected
+# fixed = "1.4"

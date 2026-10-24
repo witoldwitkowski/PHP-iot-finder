@@ -1,0 +1,43 @@
+name: CI
+on:
+  push:
+  pull_request:
+permissions:
+  contents: read
+env:
+  CARGO_TERM_COLOR: always
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with: { components: "rustfmt, clippy" }
+      - uses: Swatinem/rust-cache@v2
+      - run: cargo fmt --check
+      - run: cargo clippy --all-targets --locked -- -D warnings
+      - run: cargo test --locked
+      - run: cargo run --locked -- selftest
+  supply-chain:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: EmbarkStudios/cargo-deny-action@v2
+      - uses: rustsec/audit-check@v2
+        with: { token: "${{ secrets.GITHUB_TOKEN }}" }
+  static-builds:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with: { targets: "x86_64-unknown-linux-musl, aarch64-unknown-linux-musl" }
+      - uses: Swatinem/rust-cache@v2
+      - run: sudo apt-get update && sudo apt-get install -y musl-tools gcc-aarch64-linux-gnu qemu-user
+      - run: ./scripts/build-dist.sh
+      - name: Run the aarch64 build under QEMU
+        run: |
+          mkdir t && tar -xzf dist/iotscan-*-aarch64-linux.tar.gz -C t
+          qemu-aarch64 t/*/iotscan --version
+          qemu-aarch64 t/*/iotscan selftest
+      - uses: actions/upload-artifact@v4
+        with: { name: dist, path: dist/ }

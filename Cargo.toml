@@ -1,0 +1,47 @@
+[package]
+name = "iotscan"
+version = "0.1.0"
+edition = "2024"
+rust-version = "1.88"
+description = "Safe, extensible vulnerability scanner for the IoT devices on your home network"
+license = "MIT"
+readme = "README.md"
+repository = "https://github.com/witoldwitkowski/php-iot-finder"
+keywords = ["iot", "security", "scanner", "network"]
+categories = ["command-line-utilities", "network-programming"]
+
+[lib]
+name = "iotscan"
+path = "src/lib.rs"
+
+[[bin]]
+name = "iotscan"
+path = "src/main.rs"
+
+[dependencies]
+clap = { version = "4.6.7", features = ["derive"] }
+clap_complete = "4.6.11"
+httparse = "1.10.1"
+if-addrs = "0.15.0"
+libc = "0.2.191"
+rustls = { version = "0.23.46", default-features = false, features = ["ring", "std", "tls12"] }
+serde = { version = "1.0.229", features = ["derive"] }
+serde_json = "1.0.154"
+socket2 = { version = "0.6.5", features = ["all"] }
+tokio = { version = "1.54.1", features = ["rt-multi-thread", "net", "time", "io-util", "macros", "sync", "signal", "fs", "process"] }
+tokio-rustls = { version = "0.26.6", default-features = false, features = ["ring", "tls12"] }
+toml = "1.1.8"
+
+[dev-dependencies]
+rcgen = "0.14"
+tempfile = "3.27.0"
+
+[profile.release]
+opt-level = 3
+lto = "fat"
+codegen-units = 1
+strip = true
+debug = false
+
+[profile.dev]
+opt-level = 1

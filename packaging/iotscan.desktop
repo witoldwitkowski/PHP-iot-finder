@@ -1,0 +1,11 @@
+[Desktop Entry]
+Type=Application
+Name=iotscan
+GenericName=IoT network scanner
+Comment=Scan your home network for vulnerable IoT devices
+Exec=iotscan gui
+Icon=iotscan
+Terminal=false
+Categories=Network;Security;System;
+Keywords=iot;network;scanner;vulnerability;security;php;
+StartupNotify=true
