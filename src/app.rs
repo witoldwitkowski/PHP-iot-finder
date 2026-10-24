@@ -211,7 +211,7 @@ fn exit_for(r: &ScanResult, threshold: Option<Severity>) -> ExitCode {
 
 /// Write a file readable only by the current user.
 fn write_private(path: &std::path::Path, data: &[u8]) -> Result<(), String> {
-    use std::os::unix::fs::OpenOptionsExt;
+    use std::os::unix::fs::{OpenOptionsExt, PermissionsExt};
     let mut f = std::fs::OpenOptions::new()
         .write(true)
         .create(true)
@@ -219,6 +219,8 @@ fn write_private(path: &std::path::Path, data: &[u8]) -> Result<(), String> {
         .mode(0o600)
         .open(path)
         .map_err(|e| format!("{}: {e}", path.display()))?;
+    // `mode` applies only when the file is created; tighten a pre-existing file too.
+    f.set_permissions(std::fs::Permissions::from_mode(0o600)).map_err(|e| format!("{}: {e}", path.display()))?;
     f.write_all(data).map_err(|e| format!("{}: {e}", path.display()))
 }
 

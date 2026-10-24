@@ -171,6 +171,10 @@ async fn text_colour_and_report_files() {
     assert_eq!(saved["devices"].as_array().unwrap().len(), 1);
     let html = std::fs::read_to_string(&html_path).unwrap();
     assert!(html.starts_with("<!doctype html>") && html.contains("PHP2Shell") && !html.contains("<script"));
+    // Overwriting an existing, world-readable file must tighten it.
+    std::fs::set_permissions(&json_path, std::fs::Permissions::from_mode(0o644)).unwrap();
+    let again = run_async(d.path().to_path_buf(), scan_args(&ports, &["--no-history", "-q", "-o", json_path.to_str().unwrap()])).await;
+    assert_eq!(again.code, 1);
     // Result files may describe your network: owner-only.
     assert_eq!(std::fs::metadata(&json_path).unwrap().permissions().mode() & 0o777, 0o600);
     assert_eq!(std::fs::metadata(&html_path).unwrap().permissions().mode() & 0o777, 0o600);

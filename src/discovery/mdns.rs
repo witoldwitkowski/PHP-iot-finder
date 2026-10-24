@@ -206,7 +206,7 @@ pub fn assemble(msgs: &[(IpAddr, Message)]) -> Vec<MdnsDevice> {
         let ips = host_ips.get(target).cloned().unwrap_or_default();
         let primary = ips.iter().find(|i| i.is_ipv4()).or(ips.first()).copied().unwrap_or(*src);
         ensure(&mut by_ip, primary, Some(target), &ips);
-        let svc_type = service_type_of(inst_lc, ptr_owner.get(inst_lc));
+        let svc_type = sanitize(&service_type_of(inst_lc, ptr_owner.get(inst_lc)), 64);
         let instance = instance_label(inst_lc, &svc_type);
         let mut txt_items: Vec<String> =
             txt.get(inst_lc).map(|t| t.iter().filter(|s| !s.is_empty()).take(8).map(|s| sanitize(s, 80)).collect()).unwrap_or_default();
@@ -319,6 +319,18 @@ mod tests {
         ]);
         let devs = assemble(&[(src, m)]);
         assert!(!devs[0].services[0].instance.contains('\x1b'));
+    }
+
+    #[test]
+    fn hostile_service_type_is_sanitized_too() {
+        let src: IpAddr = "192.168.1.9".parse().unwrap();
+        let m = msg(vec![
+            rec("inst._evil\x1b[2J\x07._tcp.local", dns::T_SRV, RData::Srv { port: 80, target: "h.local".into() }),
+            rec("h.local", dns::T_A, RData::A("192.168.1.9".parse().unwrap())),
+        ]);
+        let devs = assemble(&[(src, m)]);
+        let all = format!("{:?}", devs);
+        assert!(!all.contains('\x1b') && !all.contains('\x07'), "{all}");
     }
 
     #[test]
