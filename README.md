@@ -7,7 +7,8 @@ on Ubuntu, Lubuntu and other Linux systems, on x86_64 and on Raspberry Pi
 
 It ships with a checker for the **October 2026 PHP2Shell flaws
 (CVE-2026-109618 / CVE-2026-109619)**, plus end-of-life PHP, exposed
-`phpinfo()` pages, Telnet and UPnP. New vulnerabilities are added as small,
+`phpinfo()` pages, Telnet, UPnP, exposed MQTT brokers and the discontinued Boa web server
+found in many cameras and routers. New vulnerabilities are added as small,
 tested checkers (often just a few lines of TOML): see
 [docs/WRITING_CHECKERS.md](docs/WRITING_CHECKERS.md).
 
@@ -170,6 +171,19 @@ cargo test                                    # unit, integration and end-to-end
 `make dist` needs `musl-tools` and `gcc-aarch64-linux-gnu`
 (`rustup target add x86_64-unknown-linux-musl aarch64-unknown-linux-musl`).
 Architecture notes: [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
+
+## The next checker: give an agent a CVE
+
+Adding a checker is a repeatable, guard-railed workflow. In Claude Code:
+
+> Use the **checker-author** agent to add a checker for **CVE-2026-XXXXX**.
+
+The agent researches the CVE (recording sources and conflicts in `docs/research/`), picks the
+safest detection route, scaffolds it, writes tests, and must pass `scripts/verify.sh`. Every
+checker is also run through automatic **conformance rules** (read-only, small, non-exploit-like
+probes; complete, printable findings; no panics on hostile devices), so a plugin cannot quietly
+become unsafe. Details: [docs/CVE_INTAKE.md](docs/CVE_INTAKE.md), the skills in `.claude/skills/`,
+and [CLAUDE.md](CLAUDE.md).
 
 ## Keeping it current
 

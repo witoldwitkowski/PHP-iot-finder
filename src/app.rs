@@ -305,11 +305,20 @@ fn advisories_command(file: Option<PathBuf>, json: bool) -> Result<ExitCode, Str
             severity: Severity,
             cves: &'a [String],
             published: &'a str,
+            verified: bool,
         }
         let list: Vec<A> = db
             .advisory
             .iter()
-            .map(|a| A { id: &a.id, product: &a.product, title: &a.title, severity: a.severity, cves: &a.cves, published: &a.published })
+            .map(|a| A {
+                id: &a.id,
+                product: &a.product,
+                title: &a.title,
+                severity: a.severity,
+                cves: &a.cves,
+                published: &a.published,
+                verified: a.verified,
+            })
             .collect();
         println!(
             "{}",
@@ -318,7 +327,14 @@ fn advisories_command(file: Option<PathBuf>, json: bool) -> Result<ExitCode, Str
     } else {
         println!("Advisory database (data updated {})", db.updated);
         for a in &db.advisory {
-            println!("  {:<18} {:<8} {}  {}", a.id, a.severity.as_str(), a.cves.join(","), a.title);
+            println!(
+                "  {:<18} {:<8} {}  {}{}",
+                a.id,
+                a.severity.as_str(),
+                a.cves.join(","),
+                a.title,
+                if a.verified { "" } else { "  [unverified]" }
+            );
         }
         for w in &warnings {
             println!("warning: {w}");

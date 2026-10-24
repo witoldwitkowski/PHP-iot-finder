@@ -90,6 +90,13 @@ references = [
   "https://support.plesk.com/hc/en-us/articles/44397729587351-Vulnerability-CVE-2026-109618-and-CVE-2026-109619-PHP2Shell-Remote-code-execution-in-PHP-shipped-with-Plesk",
 ]
 
+verified = false
+notes = [
+  "Compiled on 2026-10-24 from secondary write-ups (CISA, Unit 42, Huntress, AWS, Datadog, Snyk, Plesk, Sophos). php.net/security and the CVE records were not reachable at the time.",
+  "Re-verify the fixed versions (8.5.12, 8.4.27, 8.3.36, 8.2.35) and whether 8.1, 8.0 and 7.4 got official source back-ports; sources disagreed about end-of-life branches.",
+  "Some pre-release reports said PHP 5 through 8 were affected; the published advisory narrowed it to the branches listed here.",
+]
+
 # Upstream fixed releases. A version below `fixed` on its branch is affected.
 [[advisory.affected]]
 branch = "8.5"
@@ -128,9 +135,33 @@ note = "PHP 8.1, 8.0 and 7.4 are end-of-life: there is no official fixed release
 # summary = "..."
 # remediation = "Upgrade to 1.4.2 or later."
 # references = ["https://example.com/advisory"]
+# verified = true               # false (the default) requires `notes` explaining the provenance
+# notes = []
 # [[advisory.affected]]
 # branch = "1.4"
 # fixed = "1.4.2"
 # [[advisory.affected]]
 # from = "0.0"          # no `fixed`: every version from here up is affected
 # fixed = "1.4"
+
+[[advisory]]
+id = "boa-unmaintained"
+product = "boa"
+title = "Boa web server is discontinued and will not be patched"
+severity = "medium"
+cves = ["CVE-2009-4496"]
+published = "2022-11-22"
+summary = "Boa, a small web server embedded in many cameras, routers and other IoT firmware, was discontinued in 2005. It has known vulnerabilities, and Microsoft's 2022 analysis reports that firmware updates and downstream patches do not address them, so exposure can only be reduced, not patched away."
+remediation = "Check the vendor for firmware that replaces the Boa web server. If none exists, keep the device off untrusted networks (a separate VLAN or guest network, never port-forwarded), disable remote access to its web interface, and plan to replace it. Do not rely on the version number: every Boa release is affected."
+references = ["https://www.microsoft.com/en-us/security/blog/2022/11/22/vulnerable-sdk-components-lead-to-supply-chain-risks-in-iot-and-ot-environments/", "https://nvd.nist.gov/vuln/detail/CVE-2009-4496"]
+verified = false
+any_version = true
+notes = [
+  "Read 2026-10-24: Microsoft Security blog, 2022-11-22 (full page): Boa discontinued 2005; firmware updates and downstream patches do not address Boa's known vulnerabilities; CVE-2009-4496 named as a Boa flaw. The page gives no Boa version numbers and no banner string.",
+  "Not read (host unreachable or snippet only): Debian security tracker, NVD, Exploit-DB, press coverage. No independent second source for the CVE-2009-4496 description.",
+  "Deliberately NOT cited: CVE-2017-9833. It is disputed (Debian: NOT-FOR-US; the vulnerable `wapopen` CGI belongs to a vendor, not Boa) and must not be reported as a Boa flaw. The RealTek SDK CVEs (CVE-2021-35395, CVE-2022-27255) are SDK flaws, not Boa flaws, and are not detectable from a Boa banner.",
+  "Severity medium: a lifecycle/exposure risk with named but unconfirmed-by-scanner flaws; nothing here proves a given device is exploitable.",
+]
+
+[[advisory.affected]]
+from = "0.0"

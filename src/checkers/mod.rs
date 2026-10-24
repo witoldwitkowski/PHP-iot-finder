@@ -13,7 +13,9 @@
 //!
 //! See `docs/WRITING_CHECKERS.md` for a step-by-step guide.
 
+pub mod conformance;
 pub mod data_advisory;
+pub mod mqtt_exposed;
 pub mod php2shell;
 pub mod php_eol;
 pub mod php_info;
@@ -286,6 +288,7 @@ impl Registry {
                 Box::new(php_info::PhpInfoExposed),
                 Box::new(telnet::TelnetOpen),
                 Box::new(upnp::UpnpExposed),
+                Box::new(mqtt_exposed::MqttExposed),
                 Box::new(data_advisory::DataAdvisory),
             ],
         }
@@ -382,7 +385,17 @@ impl Registry {
         for c in &self.checkers {
             let meta = c.meta();
             match std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| c.evaluate(input))) {
-                Ok(mut f) => out.append(&mut f),
+                Ok(mut f) => {
+                    // Backstop for every plugin: nothing a device said may reach a report as a control character.
+                    for x in &mut f {
+                        x.title = crate::util::scrub(&x.title);
+                        x.summary = crate::util::scrub(&x.summary);
+                        x.remediation = crate::util::scrub(&x.remediation);
+                        x.evidence.truncate(24);
+                        x.evidence.iter_mut().for_each(|e| *e = crate::util::truncate(&crate::util::scrub(e), 600));
+                    }
+                    out.append(&mut f)
+                }
                 Err(_) => out.push(
                     Finding::new(meta.id, format!("Checker '{}' failed", meta.id), crate::model::Severity::Info, Confidence::Confirmed)
                         .summary("The checker panicked while evaluating this device. The scan continued; please report this."),
@@ -396,11 +409,19 @@ impl Registry {
 
 /// Shared helper: build the common parts of an advisory-derived finding.
 pub fn advisory_finding(adv: &Advisory, checker_id: &str, severity: crate::model::Severity, confidence: Confidence) -> Finding {
-    Finding::new(checker_id, adv.title.clone(), severity, confidence)
+    let mut f = Finding::new(checker_id, adv.title.clone(), severity, confidence)
         .remediation(adv.remediation.clone())
         .cves(&adv.cves)
-        .references(&adv.references)
+        .references(&adv.references);
+    if !adv.verified {
+        f.evidence.push(UNVERIFIED_NOTE.to_string());
+    }
+    f
 }
+
+/// Added to findings whose advisory data has not been checked against the vendor's own advisory.
+pub const UNVERIFIED_NOTE: &str =
+    "Note: the advisory's version data is compiled from secondary sources and not yet verified against the vendor's own advisory.";
 
 /// Advice appended to findings whose version evidence may be outdated by back-porting.
 pub const BACKPORT_NOTE: &str = "This looks like a distribution or vendor build. Those usually back-port security fixes without changing the version number, so the device may already be patched. Check the package changelog (apt changelog <pkg> | grep CVE, or rpm -q --changelog <pkg>) or the vendor's firmware release notes before treating this as confirmed.";

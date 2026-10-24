@@ -20,10 +20,22 @@ pub fn parse_banner(banner: &str) -> Vec<Product> {
     let mut depth = 0usize;
     let mut token = String::new();
     let flush = |token: &mut String, out: &mut Vec<Product>| {
+        let valid = |n: &str| {
+            !n.is_empty()
+                && n.len() <= 40
+                && n.starts_with(|c: char| c.is_ascii_alphabetic())
+                && n.chars().all(|c| c.is_ascii_alphanumeric() || "-_.+".contains(c))
+        };
         if let Some((name, ver)) = token.split_once('/') {
             let name = name.trim().to_ascii_lowercase();
-            if !name.is_empty() && name.len() <= 40 && name.chars().all(|c| c.is_ascii_alphanumeric() || "-_.+".contains(c)) {
+            if valid(&name) {
                 out.push(Product { name, version: Version::parse(ver), raw: token.clone() });
+            }
+        } else {
+            // A bare product name ("Server: Boa") still identifies the product, just not its version.
+            let name = token.trim().to_ascii_lowercase();
+            if valid(&name) {
+                out.push(Product { name, version: None, raw: token.clone() });
             }
         }
         token.clear();
@@ -35,7 +47,7 @@ pub fn parse_banner(banner: &str) -> Vec<Product> {
             c if depth > 0 => {
                 let _ = c;
             }
-            c if c.is_whitespace() => flush(&mut token, &mut out),
+            c if c.is_whitespace() || c.is_control() => flush(&mut token, &mut out),
             c => token.push(c),
         }
         if out.len() >= 16 {
@@ -85,7 +97,9 @@ mod tests {
     fn parses_iot_servers() {
         let p = parse_banner("Boa/0.94.14rc21");
         assert_eq!(p[0].name, "boa");
-        assert!(parse_banner("GoAhead-Webs").is_empty());
+        let bare = parse_banner("GoAhead-Webs");
+        assert_eq!((bare[0].name.as_str(), bare[0].version.is_none()), ("goahead-webs", true));
+        assert_eq!(parse_banner("Boa")[0].name, "boa");
         assert_eq!(parse_banner("lighttpd/1.4.55")[0].name, "lighttpd");
         assert_eq!(parse_banner("PHP/5.6.40-0+deb8u12")[0].version.as_ref().unwrap().major, 5);
     }
@@ -108,9 +122,17 @@ mod tests {
     }
 
     #[test]
+    fn control_characters_split_tokens() {
+        let p = parse_banner("PHP/7.4.33\u{0}evil/1.0\u{1b}[2J");
+        assert_eq!(p[0].raw, "PHP/7.4.33");
+        assert!(p.iter().all(|x| !x.raw.chars().any(char::is_control)));
+    }
+
+    #[test]
     fn garbage_is_safe() {
         assert!(parse_banner("").is_empty());
         assert!(parse_banner("////").is_empty());
+        assert!(parse_banner("123 /x 9/9").is_empty(), "names must start with a letter");
         let big = "a/1.0 ".repeat(1000);
         assert!(parse_banner(&big).len() <= 17);
         let _ = parse_banner("((((");

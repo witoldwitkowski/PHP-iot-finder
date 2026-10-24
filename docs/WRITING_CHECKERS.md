@@ -3,6 +3,16 @@
 iotscan is built so that a new vulnerability is usually a few lines. There are
 two routes. Pick the simplest one that fits.
 
+**Fastest path:** give an agent the CVE (see [CVE_INTAKE.md](CVE_INTAKE.md)). It uses the
+`checker-author` agent and the `add-checker`, `cve-research` and `network-probe-safety`
+skills in `.claude/`, scaffolds with `scripts/new-checker.py`, and must pass
+`scripts/verify.sh` before it is done. The rest of this page is the manual route.
+
+Every checker is automatically held to the **conformance rules**
+(`src/checkers/conformance.rs`, run by `cargo test` and `iotscan selftest`): small read-only
+probes (anything beyond `GET /` is `Probe::active`), no exploit-looking requests, complete and
+printable findings, no panics or slow calls on hostile devices, deterministic results.
+
 ## Route 1: data only (no code)
 
 If the vulnerable software announces its version in an HTTP `Server` or
@@ -21,6 +31,8 @@ published   = "2026-11-02"
 summary     = "What it is and why it matters, one or two sentences."
 remediation = "Upgrade to 1.4.70 or later."
 references  = ["https://example.org/advisory"]
+verified    = false      # true only if you read the vendor's own advisory
+notes       = ["Where the data came from, the date, and what is unconfirmed."]   # required when verified = false
 
 [[advisory.affected]]
 branch = "1.4"        # only versions on 1.4.x ...

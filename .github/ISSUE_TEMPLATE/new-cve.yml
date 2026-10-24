@@ -1,0 +1,24 @@
+name: New CVE checker
+description: Ask for a checker for a vulnerability
+title: "checker: CVE-"
+labels: ["checker"]
+body:
+  - type: input
+    id: cve
+    attributes: { label: CVE id or advisory link, placeholder: CVE-2026-12345 }
+    validations: { required: true }
+  - type: textarea
+    id: where
+    attributes:
+      label: How it shows up on your network (optional)
+      description: Product and versions, the banner or page that names them, the port or protocol.
+  - type: textarea
+    id: notes
+    attributes:
+      label: Anything else
+      description: Links, devices you have, whether you can test against a real device.
+  - type: markdown
+    attributes:
+      value: |
+        An agent will research the CVE and add a checker following `docs/CVE_INTAKE.md`.
+        Checkers never exploit a vulnerability; if safe detection is impossible you will be told why.

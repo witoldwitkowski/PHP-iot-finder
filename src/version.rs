@@ -61,8 +61,11 @@ impl Version {
         if count < 2 {
             return None;
         }
-        let suffix: String =
-            rest[idx..].chars().take_while(|c| !c.is_whitespace() && !matches!(c, ')' | ';' | ',' | '"' | '<' | '(')).take(64).collect();
+        let suffix: String = rest[idx..]
+            .chars()
+            .take_while(|c| !c.is_whitespace() && !c.is_control() && !matches!(c, ')' | ';' | ',' | '"' | '<' | '('))
+            .take(64)
+            .collect();
         Some(Version { major: nums[0], minor: nums[1], patch: nums[2], has_patch: count >= 3, suffix })
     }
 
@@ -162,6 +165,8 @@ mod tests {
         // Trailing prose is not part of the suffix.
         assert_eq!(v("8.2.30 System Linux").suffix, "");
         assert_eq!(v("8.2.30-1ubuntu1 (cli)").suffix, "-1ubuntu1");
+        // Control characters never become part of a version.
+        assert_eq!(v("7.4.33-1\u{0}evil\u{1b}[2J").suffix, "-1");
     }
 
     #[test]

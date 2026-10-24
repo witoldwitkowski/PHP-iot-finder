@@ -42,10 +42,10 @@ impl Checker for UpnpExposed {
             })
             .evidence("Replied to an SSDP M-SEARCH");
         if let Some(sv) = &s.server {
-            f = f.evidence(format!("SERVER: {sv}"));
+            f = f.evidence(format!("SERVER: {}", crate::util::truncate(sv, 200)));
         }
         if let Some(m) = &s.model {
-            f = f.evidence(format!("Model: {m}"));
+            f = f.evidence(format!("Model: {}", crate::util::truncate(m, 120)));
         }
         vec![f]
     }

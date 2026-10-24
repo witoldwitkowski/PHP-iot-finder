@@ -12,7 +12,7 @@ iotscan \- find vulnerable IoT devices on your home network
 .SH DESCRIPTION
 .B iotscan
 discovers the devices on your local network, identifies what each one is running, and checks them for known vulnerabilities and risky configuration.
-It ships with a checker for the October 2026 \fBPHP2Shell\fR flaws (CVE-2026-109618 and CVE-2026-109619), plus checks for end-of-life PHP, exposed phpinfo() pages, Telnet and UPnP.
+It ships with a checker for the October 2026 \fBPHP2Shell\fR flaws (CVE-2026-109618 and CVE-2026-109619), plus checks for end-of-life PHP, exposed phpinfo() pages, Telnet, UPnP, MQTT brokers and the discontinued Boa web server.
 New checkers are added as small Rust modules or, for banner-identifiable software, as entries in a TOML advisory file.
 .PP
 It is a single static binary with no runtime dependencies and works on Ubuntu, Lubuntu and other Linux systems (x86_64 and aarch64).
@@ -259,6 +259,8 @@ severity = "high"
 cves = ["CVE-2026-00000"]
 summary = "..."
 remediation = "Upgrade to 1.4.2 or later."
+verified = false
+notes = ["Read the vendor advisory on 2026-11-02; fixed versions unconfirmed."]
 [[advisory.affected]]
 branch = "1.4"
 fixed = "1.4.2"

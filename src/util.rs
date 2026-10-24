@@ -167,6 +167,20 @@ pub fn sanitize(s: &str, max: usize) -> String {
     out.trim_end().to_string()
 }
 
+/// Replace control and bidirectional-override characters with spaces, keeping everything else.
+/// A cheap backstop for text that was already sanitised at ingest.
+pub fn scrub(s: &str) -> String {
+    s.chars()
+        .map(|c| {
+            if c.is_control() || matches!(c, '\u{202a}'..='\u{202e}' | '\u{2066}'..='\u{2069}' | '\u{200b}'..='\u{200f}' | '\u{feff}') {
+                ' '
+            } else {
+                c
+            }
+        })
+        .collect()
+}
+
 /// Truncate to at most `max` characters, appending an ellipsis when cut.
 pub fn truncate(s: &str, max: usize) -> String {
     if s.chars().count() <= max {
@@ -242,6 +256,12 @@ mod tests {
         assert!(s.starts_with("hello"));
         assert_eq!(sanitize("a      b", 100), "a b");
         assert_eq!(sanitize("abcdefghij", 5), "abcde…");
+    }
+
+    #[test]
+    fn scrub_keeps_text_replaces_controls() {
+        assert_eq!(scrub("a\u{1b}[2Jb\u{202e}c\nd"), "a [2Jb c d");
+        assert_eq!(scrub("plain é€😀"), "plain é€😀");
     }
 
     #[test]

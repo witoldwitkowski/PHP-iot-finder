@@ -65,7 +65,8 @@ fn evidence(f: &PhpFact) -> Vec<String> {
     if let Some(h) = &f.vendor_hint {
         e.push(format!("Vendor-packaging hint: {h}"));
     }
-    e
+    // Device-supplied text: bounded and printable.
+    e.iter().take(12).map(|x| crate::util::truncate(&crate::util::scrub(x), 300)).collect()
 }
 
 /// Judge one port's PHP evidence against the advisory.

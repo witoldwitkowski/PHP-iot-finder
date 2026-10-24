@@ -246,6 +246,8 @@ severity = "high"
 cves = ["CVE-2017-9833"]
 summary = "Boa has had no releases since 2005."
 remediation = "Replace the device firmware."
+verified = false
+notes = ["Written by hand for this test; no vendor advisory read."]
 [[advisory.affected]]
 from = "0.0"
 "#,
@@ -294,4 +296,21 @@ fn local_only_classification_for_auto_targets() {
     assert!(!Target::parse("100.64.0.0/24").unwrap().is_local_only());
     assert!(Target::parse("192.168.1.0/24").unwrap().is_local_only());
     assert!(Target::parse("10.1.0.0/16").unwrap().is_local_only());
+}
+
+#[tokio::test]
+async fn advisory_overlay_without_provenance_is_rejected_with_a_warning() {
+    let dir = tempfile::tempdir().unwrap();
+    let f = dir.path().join("adv.toml");
+    std::fs::write(
+        &f,
+        "[[advisory]]\nid = \"no-provenance\"\nproduct = \"boa\"\ntitle = \"t\"\nseverity = \"high\"\n[[advisory.affected]]\nfrom = \"0.0\"\n",
+    )
+    .unwrap();
+    let m = testkit::http(vec![("/", Route::ok("").header("Server", "Boa/0.94.14rc21"))]).await;
+    let mut o = opts(&["127.0.0.1"], vec![m.port]);
+    o.advisories = Some(f);
+    let r = scan(o).await.unwrap();
+    assert!(r.devices[0].findings.iter().all(|f| f.checker != "no-provenance"));
+    assert!(r.warnings.iter().any(|w| w.contains("notes")), "{:?}", r.warnings);
 }

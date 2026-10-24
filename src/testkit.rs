@@ -117,6 +117,25 @@ pub async fn banner(banner: &[u8]) -> Mock {
     Mock { port, task }
 }
 
+/// Like [`banner`], on a chosen address and port (for services that must sit on their well-known port).
+pub async fn banner_at(bind: &str, banner: &[u8]) -> std::io::Result<Mock> {
+    let banner = banner.to_vec();
+    let l = TcpListener::bind(bind).await?;
+    let port = l.local_addr()?.port();
+    let task = tokio::spawn(async move {
+        while let Ok((mut s, _)) = l.accept().await {
+            let b = banner.clone();
+            tokio::spawn(async move {
+                let mut buf = [0u8; 64];
+                let _ = tokio::time::timeout(Duration::from_millis(300), s.read(&mut buf)).await;
+                let _ = s.write_all(&b).await;
+                tokio::time::sleep(Duration::from_millis(100)).await;
+            });
+        }
+    });
+    Ok(Mock { port, task })
+}
+
 /// Accepts connections and never says anything (a hung embedded web server).
 pub async fn hang() -> Mock {
     let l = TcpListener::bind("127.0.0.1:0").await.expect("bind mock");
@@ -242,6 +261,8 @@ pub async fn fleet() -> Fleet {
         ])
         .await,
     );
+    add("boa", http(vec![("/", Route::ok("<title>IP Camera</title>").header("Server", "Boa/0.94.14rc21"))]).await);
+    add("boa-no-version", http(vec![("/", Route::ok("<title>Router</title>").header("Server", "Boa"))]).await);
     add(
         "telnet",
         banner(&[

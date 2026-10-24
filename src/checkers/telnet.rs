@@ -39,7 +39,7 @@ impl Checker for TelnetOpen {
                     .remediation("Disable Telnet in the device's settings and use SSH or the vendor app instead. If it cannot be disabled, update the firmware, change default passwords, and keep the device on an isolated network.")
                     .evidence(format!("TCP port {} is open and speaks Telnet", s.port));
                 if let Some(b) = &s.banner {
-                    f = f.evidence(format!("Banner: {b}"));
+                    f = f.evidence(format!("Banner: {}", crate::util::truncate(b, 200)));
                 }
                 f
             })

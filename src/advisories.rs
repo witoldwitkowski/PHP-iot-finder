@@ -93,9 +93,21 @@ pub struct Advisory {
     /// Affected-version rules.
     #[serde(default)]
     pub affected: Vec<Affected>,
+    /// Also match banners that name the product without a version (for products where every
+    /// version is affected, such as discontinued software).
+    #[serde(default)]
+    pub any_version: bool,
     /// Handling of branches with no official fix.
     #[serde(default)]
     pub legacy: Option<Legacy>,
+    /// True only when the version data was checked against the vendor's own advisory.
+    /// Unverified advisories still work, but findings say so.
+    #[serde(default)]
+    pub verified: bool,
+    /// Provenance and open questions: sources used, date, anything that conflicted.
+    /// Required when `verified` is false.
+    #[serde(default)]
+    pub notes: Vec<String>,
 }
 
 /// Result of checking a version against an advisory.
@@ -282,11 +294,20 @@ impl AdvisoryDb {
             {
                 p.push(format!("{}: bad legacy.below '{}'", a.id, l.below));
             }
+            if a.any_version && !a.affected.iter().any(|r| r.fixed.is_none() && r.branch.is_none()) {
+                p.push(format!(
+                    "{}: `any_version = true` only makes sense when every version is affected (add `from = \"0.0\"` with no `fixed`)",
+                    a.id
+                ));
+            }
             if a.affected.is_empty() && a.legacy.is_none() {
                 p.push(format!("{}: has neither `affected` rules nor `legacy`", a.id));
             }
             if a.title.is_empty() {
                 p.push(format!("{}: missing title", a.id));
+            }
+            if !a.verified && a.notes.is_empty() {
+                p.push(format!("{}: `verified = false` needs `notes` saying where the data came from and what is unconfirmed", a.id));
             }
             for c in &a.cves {
                 if !(c.starts_with("CVE-") && c.len() >= 9) {

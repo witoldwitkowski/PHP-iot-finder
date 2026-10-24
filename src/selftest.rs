@@ -78,7 +78,7 @@ pub async fn run() -> Vec<Check> {
     };
     c.check("passive scan completes", true, "");
     c.check(
-        "scan of 11 mock services finishes in under 30s",
+        &format!("scan of {} mock services finishes in under 30s", fleet.all_ports().len()),
         started.elapsed() < Duration::from_secs(30),
         format!("took {:?}", started.elapsed()),
     );
@@ -115,6 +115,18 @@ pub async fn run() -> Vec<Check> {
         "redirect to /login.php is followed and PHP found",
         finding(d, "php2shell", p("redirect-to-php")).is_some(),
         describe(d, p("redirect-to-php")),
+    );
+    c.check(
+        "Boa web server (with and without a version) → discontinued-software finding, likely",
+        ["boa", "boa-no-version"].iter().all(|n| {
+            finding(d, "boa-unmaintained", p(n)).is_some_and(|f| f.confidence == Confidence::Likely && f.severity == Severity::Medium)
+        }),
+        format!("{} / {}", describe(d, p("boa")), describe(d, p("boa-no-version"))),
+    );
+    c.check(
+        "Boa finding does not cite the disputed CVE-2017-9833",
+        d.findings.iter().filter(|f| f.checker == "boa-unmaintained").all(|f| !f.cves.iter().any(|c| c == "CVE-2017-9833")),
+        "disputed CVE cited",
     );
     c.check(
         "plain lighttpd device has no PHP findings",
@@ -202,6 +214,16 @@ pub async fn run() -> Vec<Check> {
         matches!(engine::run(o, Arc::new(Environment::none()), Progress::new(false)).await, Err(ScanError::Config(_))),
         "typo accepted",
     );
+
+    // ---- plugin rules ----
+    let problems = crate::checkers::Registry::builtin().conformance();
+    c.check(
+        "every checker passes the plugin conformance rules (safe probes, complete findings, no panics)",
+        problems.is_empty(),
+        problems.join("; "),
+    );
+    let problems = crate::advisories::AdvisoryDb::embedded().validate();
+    c.check("built-in advisory database is valid", problems.is_empty(), problems.join("; "));
 
     // ---- cancellation ----
     let prog = Progress::new(false);
